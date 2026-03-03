@@ -5,10 +5,10 @@ const ApiError = require("../utils/ApiError");
 const userNewsController = {};
 
 // 학습한 기사 저장
-userNewsController.createUserNews = async (request, response, next) => {
+userNewsController.createUserNews = async (req, res, next) => {
   try {
-    const { newsId } = request.body;
-    const userId = request.userId;
+    const { newsId } = req.body;
+    const userId = req.userId;
 
     if (!newsId) {
       throw new ApiError("잘못된 요청입니다. 다시 시도하세요.", 400, true);
@@ -26,33 +26,33 @@ userNewsController.createUserNews = async (request, response, next) => {
 
     const userNews = await UserNews.create({ user: userId, news: newsId });
 
-    return response.status(201).json({ success: true, data: userNews });
-  } catch (error) {
-    next(error);
+    return res.status(201).json({ success: true, data: userNews });
+  } catch (err) {
+    next(err);
   }
 };
 
 // 학습 기사 삭제
-userNewsController.deleteUserNews = async (request, response, next) => {
+userNewsController.deleteUserNews = async (req, res, next) => {
   try {
-    const { id } = request.params;
-    const userId = request.userId;
+    const { id } = req.params;
+    const userId = req.userId;
 
     const userNews = await UserNews.findOneAndDelete({ user: userId, news: id });
     if (!userNews) {
       throw new ApiError("저장된 기사를 찾을 수 없습니다", 404, true);
     }
 
-    return response.status(200).json({ success: true });
-  } catch (error) {
-    next(error);
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    next(err);
   }
 };
 
 // 학습 기사 목록 조회
-userNewsController.getUserNewsList = async (request, response, next) => {
+userNewsController.getUserNewsList = async (req, res, next) => {
   try {
-    const userId = request.userId;
+    const userId = req.userId;
 
     const userNewsList = await UserNews.find({
       user: userId,
@@ -61,17 +61,17 @@ userNewsController.getUserNewsList = async (request, response, next) => {
       .populate("news")
       .sort({ createdAt: -1 });
 
-    return response.status(200).json({ success: true, data: userNewsList });
-  } catch (error) {
-    next(error);
+    return res.status(200).json({ success: true, data: userNewsList });
+  } catch (err) {
+    next(err);
   }
 };
 
 // 학습한 기사 목록에서 숨기기
-userNewsController.hideUserNews = async (request, response, next) => {
+userNewsController.hideUserNews = async (req, res, next) => {
   try {
-    const { id } = request.params;
-    const userId = request.userId;
+    const { id } = req.params;
+    const userId = req.userId;
 
     const userNews = await UserNews.findOneAndUpdate(
       { user: userId, news: id },
@@ -83,9 +83,9 @@ userNewsController.hideUserNews = async (request, response, next) => {
       throw new ApiError("저장된 기사를 찾을 수 없습니다", 404, true);
     }
 
-    return response.status(200).json({ success: true });
-  } catch (error) {
-    next(error);
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    next(err);
   }
 };
 
