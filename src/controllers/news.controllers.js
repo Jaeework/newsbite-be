@@ -15,8 +15,8 @@ newsController.getAllNews = async (req, res, next) => {
       success: true,
       data: news,
     });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
 };
 
@@ -32,8 +32,8 @@ newsController.getNewsById = async (req, res, next) => {
       success: true,
       data: product,
     });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
 };
 
@@ -55,8 +55,8 @@ newsController.getNewsByWord = async (req, res, next) => {
       success: true,
       data: news,
     });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
 };
 
