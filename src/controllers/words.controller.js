@@ -37,12 +37,12 @@ wordsController.createMyWord = async (req, res) => {
     });
 
     res.status(200).json({
-      status: "success",
+      success: true,
       data: newUserWord,
     });
   } catch (err) {
     res.status(err.statusCode || 400).json({
-      status: "fail",
+      success: false,
       error: err.message,
     });
   }
@@ -85,12 +85,12 @@ wordsController.getMyWords = async (req, res) => {
     }
 
     res.status(200).json({
-      status: "success",
+      success: true,
       data: userWords,
     });
   } catch (err) {
     res.status(err.statusCode || 400).json({
-      status: "fail",
+      success: false,
       error: err.isUserError ? err.message : null,
     });
   }
@@ -122,12 +122,12 @@ wordsController.updateMyWord = async (req, res) => {
     }
 
     res.status(200).json({
-      status: "success",
+      success: true,
       data: updatedWord,
     });
   } catch (err) {
     res.status(err.statusCode || 400).json({
-      status: "fail",
+      success: false,
       error: err.isUserError ? err.message : null,
     });
   }
@@ -153,12 +153,12 @@ wordsController.deleteMyWord = async (req, res) => {
     }
 
     res.status(200).json({
-      status: "success",
+      success: true,
       data: deletedWord,
     });
   } catch (err) {
     res.status(err.statusCode || 400).json({
-      status: "fail",
+      success: false,
       error: err.isUserError ? err.message : null,
     });
   }
