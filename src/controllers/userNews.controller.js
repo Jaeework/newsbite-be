@@ -1,6 +1,6 @@
 const UserNews = require("../models/UserNews");
 const News = require("../models/News");
-const ApiError = require("../middlewares/ApiError");
+const ApiError = require("../utils/ApiError");
 
 const userNewsController = {};
 
