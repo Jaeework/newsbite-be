@@ -1,8 +1,7 @@
 const express = require("express");
 const router = express.Router();
+const meApi = require("./me.api");
 
-const myWordsApi = require("./words.api");
-
-router.use("/me/words", myWordsApi);
+router.use("/me", meApi);
 
 module.exports = router;
