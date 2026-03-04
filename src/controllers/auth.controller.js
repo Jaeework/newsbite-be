@@ -7,7 +7,7 @@ const ApiError = require("../utils/ApiError");
 // POST  /api/auth/signup
 exports.signup = async (req, res, next) => {
     try{
-        const { name, nickname, email, password, level } = req.body;
+        const { nickname, email, password, level } = req.body;
 
         const existing = await User.findOne({email});
         if(existing) {
