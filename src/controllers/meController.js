@@ -8,7 +8,7 @@ exports.getMe = async(req, res)=>{
     // DB 조회 중 오류(연결 문제, 잘못된 id 등)
     try{
         // req.userId: 로그인 토큰(JWT)을 검증하는 미들웨어에서 넣어둔 값, 즉 현재 로그인한 사용자 id
-        const user = await User.rindById(req.userId).select("-password"); // password 필드는 빼고 가져오기
+        const user = await User.findById(req.userId).select("-password"); // password 필드는 빼고 가져오기
 
 
         // 404: 리소스 없음 (유저 없음)

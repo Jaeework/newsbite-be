@@ -3,16 +3,16 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User"); 
 
 const makeToken = (userId) => {
-    return jwt.sign({userId}, process.env.JWT.SECRET, { expiresIn: "7d"});
+    return jwt.sign({userId}, process.env.JWT_SECRET, { expiresIn: "7d"});
 };
 
 // 회원가입 API: signup (중복 이메일 체크 → 비밀번호 해시 → 유저 저장 → JWT 발급 → token+user 응답)
 // POST  /api/auth/signup
 exports.signup = async (req, res) => {
     try{
-        const { nickname, email, password, level } = req.body;
+        const { name, nickname, email, password, level } = req.body;
 
-        const existing = await User.findOne({eamil});
+        const existing = await User.findOne({email});
         if(existing) {
             return res.status(400).json({message:"이미 가입된 이메일입니다."});
         }
@@ -22,6 +22,7 @@ exports.signup = async (req, res) => {
 
         // DB에 새로운 유저를 저장  -> user._id 값이 생성됨
         const user = await User.create({
+            name,
             nickname,
             email,
             password: hashed,  
@@ -41,7 +42,7 @@ exports.signup = async (req, res) => {
             user:{                           // 프론트에서 바로 쓰기 좋게 유저 정보도 함께 내려주기
                 id:user._id,
                 nickname:user.nickname,
-                email:user.eamil,
+                email:user.email,
                 level:user.level,
             },
         });
@@ -58,11 +59,11 @@ exports.signin = async (req,res) => {
     
     // 로그인 과정에서 에러 대비
     try{
-        const {eamil, password} =req.body;   
+        const {email, password} =req.body;   
 
         const user = await User.findOne({email});   
         if(!user) {
-            return res.status(400).json({massgae: "이메일 또는 비밀번호가 틀렸습니다."});
+            return res.status(400).json({message: "이메일 또는 비밀번호가 틀렸습니다."});
         }
 
         // 사용자가 입력한 평문 password와 DB에 저장된 해시 user.password를 비교
@@ -93,7 +94,7 @@ exports.signin = async (req,res) => {
 
     }catch(error) {
         // 서버 에러 (500)
-        res.status(500).json({ message: "Signin error", error: err.message });
+        res.status(500).json({ message: "Signin error", error: error.message });
 
     }
 }
