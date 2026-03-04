@@ -70,7 +70,17 @@ userWordsController.getMyWords = async (req, res, next) => {
     if (status === "doing") filter.isDone = false;
 
     let userWords = await UserWord.find(filter)
-      .populate("word", "text meaning type tts_url")
+      .populate({
+        path: "word",
+        select: "text meaning type tts_url",
+        populate: {
+          path: "news",
+          populate: {
+            path: "news",
+            select: "title",
+          },
+        },
+      })
       .sort({ createdAt: -1 });
 
     //검색어가 들어오면
@@ -151,6 +161,40 @@ userWordsController.deleteMyWord = async (req, res, next) => {
       success: true,
       data: deletedWord,
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+//단어장 csv 추출
+userWordsController.exportMyWordsCSV = async (req, res, next) => {
+  try {
+    const { userId } = req;
+
+    if (!userId) {
+      throw new ApiError("Unauthorized", 401, false);
+    }
+
+    const userWords = await UserWord.find({ user: userId })
+      .populate("word", "text meaning type")
+      .sort({ createdAt: -1 });
+
+    // CSV 헤더
+    let csv = "word,meaning,type\n";
+
+    userWords.forEach((uw) => {
+      const word = uw.word?.text || "";
+      const meaning = uw.word?.meaning || "";
+      const type = uw.word?.type || "";
+      const status = uw.isDone ? "done" : "doing";
+
+      csv += `"${word}","${meaning}","${type}"\n`;
+    });
+
+    res.header("Content-Type", "text/csv");
+    res.attachment("my-words.csv");
+
+    res.send(csv);
   } catch (err) {
     next(err);
   }
