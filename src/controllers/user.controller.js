@@ -24,7 +24,7 @@ exports.getMe = async(req, res, next)=>{
 };
 
 
-// PUT /api/me
+// PUT /api/me (내정보 수정)
 exports.updateMe = async (req, res, next) => {
   try {
     const { nickname, level, password } = req.body;
