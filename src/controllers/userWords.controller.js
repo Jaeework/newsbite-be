@@ -88,7 +88,7 @@ userWordsController.getMyWords = async (req, res, next) => {
     //검색어가 들어오면
     if (q) {
       userWords = userWords.filter((uw) =>
-        uw.word?.text.toLowerCase().includes(q.toLowerCase())
+        uw.word?.text.toLowerCase().includes(q.toLowerCase()),
       );
     }
 
@@ -124,7 +124,7 @@ userWordsController.updateMyWord = async (req, res, next) => {
     const updatedWord = await UserWord.findOneAndUpdate(
       { _id: userWordId, user: userId },
       { isDone: status === "done" },
-      { returnDocument: "after", runValidators: true }
+      { returnDocument: "after", runValidators: true },
     );
 
     if (!updatedWord) {

@@ -38,7 +38,10 @@ userNewsController.deleteUserNews = async (req, res, next) => {
     const { id } = req.params;
     const userId = req.userId;
 
-    const userNews = await UserNews.findOneAndDelete({ user: userId, news: id });
+    const userNews = await UserNews.findOneAndDelete({
+      user: userId,
+      news: id,
+    });
     if (!userNews) {
       throw new ApiError("저장된 기사를 찾을 수 없습니다", 404, true);
     }
@@ -76,7 +79,7 @@ userNewsController.hideUserNews = async (req, res, next) => {
     const userNews = await UserNews.findOneAndUpdate(
       { user: userId, news: id },
       { is_hidden: true, hidden_at: new Date() },
-      {returnDocument: "after"},
+      { returnDocument: "after" },
     );
 
     if (!userNews) {

@@ -9,7 +9,7 @@ const newsSchema = Schema(
       trim: true,
     },
     content: {
-      type: String,
+      type: [String],
       required: true,
     },
     url: {
@@ -32,7 +32,7 @@ const newsSchema = Schema(
       type: String,
     },
     translated_content: {
-      type: String,
+      type: [String],
     },
   },
   { timestamps: true },

@@ -20,7 +20,9 @@
     "express": "^5.2.1",
     "json2csv": "6.0.0-alpha.2",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.2.3"
+    "mongoose": "^9.2.3",
+    "node-cron": "^4.2.1",
+    "openai": "^6.25.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

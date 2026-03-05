@@ -22,7 +22,7 @@ const wordSchema = Schema(
     },
     type: {
       type: String,
-      enum: ["word", "idiom"],
+      enum: ["word", "idiom", "abbreviation"],
     },
     tts_url: {
       type: String,
@@ -32,7 +32,7 @@ const wordSchema = Schema(
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  }
+  },
 );
 
 wordSchema.virtual("news", {
