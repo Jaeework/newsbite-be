@@ -136,7 +136,7 @@ const fetchAndStoreNews = async () => {
         "api-key": API_KEY,
         section: "business", // 비즈니스 섹션 뉴스만 가져오기
         "show-fields": "all",
-        "page-size": 10, // 한 번에 최대 10개 기사 가져오기
+        "page-size": 5, // 한 번에 최대 5개 기사 가져오기
         "order-by": "newest", // 최신 기사부터 가져오기
       },
     });
@@ -254,10 +254,20 @@ const fetchAndStoreNews = async () => {
 
 const clearOldNews = async () => {
   try {
-    await News.deleteMany({});
-    await NewsWord.deleteMany({});
-    console.log("모든 뉴스 및 연관 단어 데이터가 삭제되었습니다.");
-  } catch (err) {}
+    // 생성일로부터 60일이 지난 뉴스와 연관된 NewsWord 데이터를 삭제
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+    const oldNews = await News.find({ createdAt: { $lt: sixtyDaysAgo } }).select("_id");
+    const oldNewsIds = oldNews.map((news) => news._id);
+
+    await NewsWord.deleteMany({ news: { $in: oldNewsIds } });
+    await News.deleteMany({ _id: { $in: oldNewsIds } });
+
+    console.log("60일 이상 지난 뉴스 및 연관 단어 데이터가 삭제되었습니다. 삭제된 뉴스 수:", oldNewsIds.length);
+  } catch (err) {
+    console.error("뉴스 삭제 중 에러 발생:", err.message);
+  }
 };
 
 module.exports = { fetchAndStoreNews, clearOldNews };

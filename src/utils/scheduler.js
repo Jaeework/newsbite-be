@@ -11,9 +11,9 @@ const initSchedule = () => {
     fetchAndStoreNews();
   });
 
-  // 2. 전체 뉴스 삭제: 2개월마다 1일 자정 (0 0 1 */2 *)
-  cron.schedule("0 0 1 */2 *", () => {
-    console.log("2개월 주기 데이터 초기화를 시작합니다.");
+  // 2. 오래된 뉴스 삭제 : 스케쥴은 매일 자정 (0 0 * * *)
+  cron.schedule("0 0 * * *", () => {
+    console.log("오래된 뉴스 삭제를 시작합니다.");
     clearOldNews();
   });
 
