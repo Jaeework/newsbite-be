@@ -1,3 +1,6 @@
+// authMiddleware는 JWT 토큰을 검사하는 미들웨어
+// authMiddlewares는 로그인 이후 API에 사용할 것.
+
 const jwt = require("jsonwebtoken");
 const ApiError = require("../utils/ApiError");
 
