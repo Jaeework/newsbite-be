@@ -32,3 +32,5 @@ coverage/
 
 # Optional npm cache
 .npm
+
+package-lock.json

@@ -1,6 +1,9 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
+require("./NewsWord");
+require("./News");
+
 const wordSchema = Schema(
   {
     text: {
@@ -11,18 +14,29 @@ const wordSchema = Schema(
     meaning: {
       type: String,
     },
+    example: {
+      type: String,
+    },
+    example_meaning: {
+      type: String,
+    },
     type: {
       type: String,
-      enum: ["word", "idiom"],
-    },
-    tts_url: {
-      type: String,
+      enum: ["word", "idiom", "abbreviation"],
     },
   },
   {
     timestamps: true,
-  },
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
+
+wordSchema.virtual("news", {
+  ref: "NewsWord",
+  localField: "_id",
+  foreignField: "word",
+});
 
 const Word = mongoose.model("Word", wordSchema);
 
