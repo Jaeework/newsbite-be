@@ -61,34 +61,39 @@ userWordsController.getMyWords = async (req, res, next) => {
       throw new ApiError("Unauthorized", 401, false);
     }
 
-    const filter = { user: userId };
-
     if (!["all", "done", "doing"].includes(status)) {
       throw new ApiError("Invalid request", 400, false);
     }
+
+    const filter = { user: userId };
 
     //상태 필터
     if (status === "done") filter.isDone = true;
     if (status === "doing") filter.isDone = false;
 
-    let userWords = await UserWord.find(filter)
-      .populate({
-        path: "word",
-        select: "text meaning type tts_url",
+    let query = UserWord.find(filter).populate({
+      path: "word",
+      select: "text meaning type",
+      populate: {
+        path: "news",
         populate: {
           path: "news",
-          populate: {
-            path: "news",
-            select: "title",
-          },
+          select: "title",
         },
-      })
-      .sort({ createdAt: -1 });
+      },
+    });
+
+    //정렬
+    if (sort === "recent") {
+      query = query.sort({ createdAt: -1 });
+    }
+
+    let userWords = await query;
 
     //검색어가 들어오면
     if (q) {
       userWords = userWords.filter((uw) =>
-        uw.word?.text.toLowerCase().includes(q.toLowerCase()),
+        uw.word?.text.toLowerCase().includes(q.toLowerCase())
       );
     }
 
@@ -97,9 +102,16 @@ userWordsController.getMyWords = async (req, res, next) => {
       userWords.sort((a, b) => a.word.text.localeCompare(b.word.text));
     }
 
+    const result = userWords.map((uw) => ({
+      id: uw._id,
+      isDone: uw.isDone,
+      createdAt: uw.createdAt,
+      word: uw.word,
+    }));
+
     res.status(200).json({
       success: true,
-      data: userWords,
+      data: result,
     });
   } catch (err) {
     next(err);
@@ -124,7 +136,7 @@ userWordsController.updateMyWord = async (req, res, next) => {
     const updatedWord = await UserWord.findOneAndUpdate(
       { _id: userWordId, user: userId },
       { isDone: status === "done" },
-      { returnDocument: "after", runValidators: true },
+      { returnDocument: "after", runValidators: true }
     );
 
     if (!updatedWord) {

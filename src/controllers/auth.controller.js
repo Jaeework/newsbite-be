@@ -60,7 +60,7 @@ exports.signin = async (req, res, next) => {
     const user = await User.findOne({ email, del_flag: false }); // 탈퇴 유저 로그인 방지
     if (!user) {
       return next(
-        new ApiError("이메일 또는 비밀번호가 틀렸습니다.", 400, true),
+        new ApiError("이메일 또는 비밀번호가 틀렸습니다.", 400, true)
       );
     }
 
@@ -68,7 +68,9 @@ exports.signin = async (req, res, next) => {
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      return next(new ApiError("이메일 또는 비밀번호가 틀렸습니다.", 400, true));
+      return next(
+        new ApiError("이메일 또는 비밀번호가 틀렸습니다.", 400, true)
+      );
     }
 
     // 로그인 성공했으면 토큰 발급
@@ -93,7 +95,6 @@ exports.signin = async (req, res, next) => {
   }
 };
 
-
 // Google 로그인 (ID Token Verify)
 // POST /api/auth/google
 exports.googleSignin = async (req, res, next) => {
@@ -111,7 +112,9 @@ exports.googleSignin = async (req, res, next) => {
     const payload = ticket.getPayload();
     const email = payload?.email;
     const nickname =
-      payload?.name || payload?.given_name || (email ? email.split("@")[0] : "user");
+      payload?.name ||
+      payload?.given_name ||
+      (email ? email.split("@")[0] : "user");
 
     if (!email) {
       return next(new ApiError("Google token has no email", 400, true));
@@ -149,22 +152,6 @@ exports.googleSignin = async (req, res, next) => {
         },
         token,
       },
-    });
-  } catch (error) {
-    return next(error);
-  }
-};
-
-
-// 로그아웃 API
-// POST /api/auth/signout
-exports.signout = async (req, res, next) => {
-  try {
-    // JWT 방식이면 서버에서 할 일은 거의 없음.
-    // (프론트에서 token 삭제하면 로그아웃 완료)
-    return res.status(200).json({
-      success: true,
-      data: null,
     });
   } catch (error) {
     return next(error);
