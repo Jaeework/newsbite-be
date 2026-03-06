@@ -5,11 +5,11 @@ const cors = require("cors");
 const connectDB = require("./src/config/db");
 const indexRouter = require("./src/routes/index");
 const errorHandler = require("./src/utils/errorHandler");
-const scheduler = require("./src/utils/scheduler");
+// const scheduler = require("./src/utils/scheduler");
 
 const app = express();
 
-scheduler();
+// scheduler();
 connectDB();
 
 app.use(
