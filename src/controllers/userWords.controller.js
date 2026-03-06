@@ -10,7 +10,7 @@ const userWordsController = {};
 userWordsController.createMyWord = async (req, res, next) => {
   try {
     const { userId } = req;
-    const { wordId } = req.body;
+    const { wordId } = req.params;
 
     if (!userId) {
       throw new ApiError("Unauthorized", 401, false);

@@ -7,24 +7,24 @@ const userNewsController = {};
 // 학습한 기사 저장
 userNewsController.createUserNews = async (req, res, next) => {
   try {
-    const { newsId } = req.body;
+    const { id } = req.params;
     const userId = req.userId;
 
-    if (!newsId) {
+    if (!id) {
       throw new ApiError("잘못된 요청입니다. 다시 시도하세요.", 400, true);
     }
 
-    const news = await News.findById(newsId);
+    const news = await News.findById(id);
     if (!news) {
       throw new ApiError("존재하지 않는 기사입니다", 404, true);
     }
 
-    const existing = await UserNews.findOne({ user: userId, news: newsId });
+    const existing = await UserNews.findOne({ user: userId, news: id });
     if (existing) {
       throw new ApiError("이미 저장된 기사입니다", 400, true);
     }
 
-    const userNews = await UserNews.create({ user: userId, news: newsId });
+    const userNews = await UserNews.create({ user: userId, news: id });
 
     return res.status(201).json({ success: true, data: userNews });
   } catch (err) {
