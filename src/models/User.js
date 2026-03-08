@@ -31,6 +31,16 @@ const userSchema = Schema(
   },
   { timestamps: true },
 );
+userSchema.set("toJSON", {
+  transform: (doc, ret) => {
+    delete ret.password;
+    delete ret.__v;
+    delete ret.createdAt;
+    delete ret.updatedAt;
+    delete ret.del_flag;
+    return ret;
+  }
+});
 
 userSchema.methods.generateToken = function () {
   return jwt.sign({ userId: this._id }, process.env.JWT_SECRET, {
