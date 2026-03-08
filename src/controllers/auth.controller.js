@@ -26,22 +26,10 @@ exports.signup = async (req, res, next) => {
       level,
     });
 
-    // 로그인 토근 발행 (자동로그인) , jwt.sign(payload, secretKey, options)
-    const token = user.generateToken();
-
     // 성공 응답 보내기, 201은 새 리소스 생성됨(회원 생성)
     return res.status(201).json({
       success: true,
-      data: {
-        user: {
-          // 프론트에서 바로 쓰기 좋게 유저 정보도 함께 내려주기
-          id: user._id,
-          nickname: user.nickname,
-          email: user.email,
-          level: user.level,
-        },
-        token, // 프론트가 저장할 JWT 토큰을 같이 내려주기
-      },
+      data: user,
     });
 
     // 서버 내부 오류(DB 연결 문제 등), 500은 서버 에러
@@ -80,12 +68,7 @@ exports.signin = async (req, res, next) => {
     return res.json({
       success: true,
       data: {
-        user: {
-          id: user._id,
-          nickname: user.nickname,
-          email: user.email,
-          level: user.level,
-        },
+        user,
         token,
       },
     });
@@ -144,12 +127,7 @@ exports.googleSignin = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       data: {
-        user: {
-          id: user._id,
-          nickname: user.nickname,
-          email: user.email,
-          level: user.level,
-        },
+        user,
         token,
       },
     });
