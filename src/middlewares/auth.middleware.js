@@ -9,7 +9,7 @@ module.exports = function auth(req,res,next) {
         const authHeader = req.headers.authorization; // Bearer <token>
 
          if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            throw new ApiError(401, "Unauthorized");
+            return next()
         }
 
         const token = authHeader.split(" ")[1];
