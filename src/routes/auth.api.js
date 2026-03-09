@@ -11,5 +11,6 @@ router.post("/signin", authController.signin);
 
 // 구글 로그인
 router.post("/google", authController.googleSignin);
+router.post("/refresh", authController.refresh);
 
 module.exports = router;

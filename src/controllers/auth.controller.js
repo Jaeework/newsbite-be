@@ -3,10 +3,13 @@ const User = require("../models/User");
 const ApiError = require("../utils/ApiError");
 const { OAuth2Client } = require("google-auth-library");
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const jwt = require("jsonwebtoken");
+
+const authController = {};
 
 // 회원가입 API: signup (중복 이메일 체크 → 비밀번호 해시 → 유저 저장 → JWT 발급 → token+user 응답)
 // POST  /api/auth/signup
-exports.signup = async (req, res, next) => {
+authController.signup = async (req, res, next) => {
   try {
     const { nickname, email, password, level } = req.body;
 
@@ -40,7 +43,7 @@ exports.signup = async (req, res, next) => {
 
 // 로그인 API: signin (이메일 유저 찾기 → 비밀번호 해시 비교 → JWT 발급 → token+user 응답)
 // POST  /api/auth/signin
-exports.signin = async (req, res, next) => {
+authController.signin = async (req, res, next) => {
   // 로그인 과정에서 에러 대비
   try {
     const { email, password } = req.body;
@@ -80,7 +83,7 @@ exports.signin = async (req, res, next) => {
 
 // Google 로그인 (ID Token Verify)
 // POST /api/auth/google
-exports.googleSignin = async (req, res, next) => {
+authController.googleSignin = async (req, res, next) => {
   try {
     const idToken = req.body.idToken || req.body.credential;
     if (!idToken) {
@@ -135,3 +138,35 @@ exports.googleSignin = async (req, res, next) => {
     return next(error);
   }
 };
+
+authController.refresh = async (req, res, next) => {
+  try {
+    const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) {
+      return next(new ApiError("Refresh token not found", 401, false));
+    }
+
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return next(new ApiError("Invalid refresh token", 401, false));
+    }
+
+    const newAccessToken = user.generateAccessToken();
+    const newRefreshToken = user.generateRefreshToken();
+
+    res.cookie("refreshToken", newRefreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    return res.status(200).json({ success: true, data: {user: user, token: newAccessToken}});
+  } catch(err) {
+    return next(err);
+  }
+};
+
+module.exports = authController;
