@@ -7,44 +7,35 @@ const { Parser } = require("json2csv");
 const userWordsController = {};
 
 //단어 저장
-userWordsController.createMyWord = async (req, res, next) => {
+userWordsController.createMyWords = async (req, res, next) => {
   try {
     const { userId } = req;
-    const { wordId } = req.params;
+    const { wordIds } = req.body;
 
-    if (!userId) {
-      throw new ApiError("Unauthorized", 401, false);
+    if (!userId) throw new ApiError("Unauthorized", 401, false);
+    if (!wordIds || !Array.isArray(wordIds)) {
+      throw new ApiError("wordIds 배열이 필요합니다.", 400, false);
     }
 
-    if (!wordId) {
-      throw new ApiError("Invalid request", 400, false);
-    }
-
-    //단어가 존재하는지 확인
-    const word = await Word.findById(wordId);
-    if (!word) {
-      throw new ApiError("Invalid request", 400, false);
-    }
-
-    //유저 단어장에 저장 된 단어인지 확인
-    const existUserWord = await UserWord.findOne({
+    const existingWords = await UserWord.find({
       user: userId,
-      word: wordId,
-    });
+      word: { $in: wordIds },
+    }).select("word");
 
-    if (existUserWord) {
-      throw new ApiError("이미 저장된 단어입니다.", 409, true);
+    const existingWordIds = existingWords.map((uw) => uw.word.toString());
+
+    const wordsToSave = wordIds.filter((id) => !existingWordIds.includes(id));
+
+    if (wordsToSave.length === 0) {
+      throw new ApiError("이미 모든 단어가 저장되어 있습니다.", 409, true);
     }
 
-    //없으면 새로 저장
-    const newUserWord = await UserWord.create({
-      user: userId,
-      word: wordId,
-    });
+    const docs = wordsToSave.map((id) => ({ user: userId, word: id }));
+    const newUserWords = await UserWord.insertMany(docs);
 
     res.status(200).json({
       success: true,
-      data: newUserWord,
+      data: newUserWords,
     });
   } catch (err) {
     next(err);
