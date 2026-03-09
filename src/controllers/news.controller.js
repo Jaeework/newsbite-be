@@ -1,6 +1,7 @@
 const News = require("../models/News");
 const Word = require("../models/Word");
-const NewsWords = require("../models/NewsWord")
+const NewsWords = require("../models/NewsWord");
+const UserWord = require("../models/UserWord");
 const ApiError = require("../utils/ApiError");
 const newsController = {};
 
@@ -63,28 +64,29 @@ newsController.getAllNews = async (req, res, next) => {
 // 뉴스 상세 조회
 newsController.getNewsById = async (req, res, next) => {
   try {
-    const { userId } = req; // 로그인하지 않은 경우 undefined일 수 있음
+    const {userId} = req;
     const newsId = req.params.id;
 
-    // 1. 뉴스 정보 조회
+
+    // 뉴스 정보 조회
     const news = await News.findById(newsId);
     if (!news) {
       throw new ApiError("뉴스를 찾을 수 없습니다.", 404, true);
     }
 
-    // 2. 해당 뉴스의 모든 단어 데이터 가져오기
+    // 해당 뉴스의 모든 단어 데이터 가져오기
     const newsWords = await NewsWords.find({ news: newsId }).populate('word');
     const allWords = newsWords.map(nw => nw.word);
 
-    // 3. 약어(abbreviation)와 일반 단어 분리
+    // 약어(abbreviation)와 일반 단어 분리
     const abbreviations = allWords.filter(word => word.type === 'abbreviation');
     const baseWords = allWords.filter(word => word.type !== 'abbreviation');
 
-    // 4. 일반 단어 처리 (유저 존재 여부에 따른 분기)
+    // 일반 단어 처리 (유저 존재 여부에 따른 분기)
     let words = [];
 
     if (userId) {
-      // A. 로그인이 된 경우: DB에서 사용자의 학습 현황 조회
+      // 로그인이 된 경우: DB에서 사용자의 학습 현황 조회
       const wordIds = baseWords.map(word => word._id);
       const userWords = await UserWord.find({
         user: userId,
@@ -102,7 +104,7 @@ newsController.getNewsById = async (req, res, next) => {
         return wordObj;
       });
     } else {
-      // B. 유저 정보가 없는 경우: 모든 단어를 false로 설정
+      // 유저 정보가 없는 경우: 모든 단어를 false로 설정
       words = baseWords.map(word => {
         const wordObj = word.toObject();
         wordObj.isDone = false;
@@ -110,7 +112,7 @@ newsController.getNewsById = async (req, res, next) => {
       });
     }
 
-    // 5. 결과 응답
+    // 결과 응답
     res.status(200).json({
       success: true,
       data: {
