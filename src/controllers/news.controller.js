@@ -1,5 +1,6 @@
 const News = require("../models/News");
 const Word = require("../models/Word");
+const NewsWords = require("../models/NewsWord")
 const ApiError = require("../utils/ApiError");
 const newsController = {};
 
@@ -61,15 +62,24 @@ newsController.getAllNews = async (req, res, next) => {
 
 // 뉴스 상세 조회
 newsController.getNewsById = async (req, res, next) => {
+  
   try {
     const newsId = req.params.id;
-    const product = await News.findById({ _id: newsId });
-    if (!product) {
+    const news = await News.findById({ _id: newsId });
+    if (!news) {
       throw new ApiError("뉴스를 찾을 수 없습니다.", 404, true);
     }
+
+    const newsWords = await NewsWords.find({ news : newsId}).populate('word');
+
+    const allwords = newsWords.map(newsword => newsword.word);
+    const abbreviations = allwords.filter(word => word.type === 'abbreviation')
+    const words = allwords.filter(word => word.type !== 'abbreviation'
+    )
+
     res.status(200).json({
       success: true,
-      data: product,
+      data: news,words,abbreviations
     });
   } catch (err) {
     next(err);
