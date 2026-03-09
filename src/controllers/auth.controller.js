@@ -51,7 +51,7 @@ authController.signin = async (req, res, next) => {
     const user = await User.findOne({ email, del_flag: false }); // 탈퇴 유저 로그인 방지
     if (!user) {
       return next(
-        new ApiError("이메일 또는 비밀번호가 틀렸습니다.", 400, true)
+        new ApiError("이메일 또는 비밀번호를 확인하세요.", 400, true)
       );
     }
 
@@ -60,19 +60,27 @@ authController.signin = async (req, res, next) => {
 
     if (!isMatch) {
       return next(
-        new ApiError("이메일 또는 비밀번호가 틀렸습니다.", 400, true)
+        new ApiError("이메일 또는  비밀번호를 확인하세요.", 400, true)
       );
     }
 
     // 로그인 성공했으면 토큰 발급
-    const token = user.generateToken();
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
 
     // 응답으로 token과 user 정보를 내려주기
-    return res.json({
+    return res.status(200).json({
       success: true,
       data: {
         user,
-        token,
+        token: accessToken,
       },
     });
   } catch (error) {
@@ -125,13 +133,21 @@ authController.googleSignin = async (req, res, next) => {
       });
     }
 
-    const token = user.generateToken();
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
 
     return res.status(200).json({
       success: true,
       data: {
         user,
-        token,
+        token: accessToken,
       },
     });
   } catch (error) {
