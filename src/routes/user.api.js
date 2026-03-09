@@ -6,7 +6,7 @@ const userWordsController = require("../controllers/userWords.controller");
 const userNewsController = require("../controllers/userNews.controller");
 
 // user
-router.get("/me", authMiddleware, userController.getUserById); 
+router.get("/me", authMiddleware, userController.getUserById);
 router.put("/me", authMiddleware, userController.updateUser);
 router.delete("/me", authMiddleware, userController.deleteUser);
 
@@ -17,7 +17,7 @@ router.get("/news", authMiddleware, userNewsController.getUserNewsList);
 router.put("/news/:id/hide", authMiddleware, userNewsController.hideUserNews);
 
 // userWords
-router.post("/words/:wordId", authMiddleware, userWordsController.createMyWord);
+router.post("/words", authMiddleware, userWordsController.createMyWords);
 router.get(
   "/words/export",
   authMiddleware,
