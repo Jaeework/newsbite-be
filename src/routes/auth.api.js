@@ -8,6 +8,7 @@ router.post("/signup", authController.signup);
 
 // 로그인 API 라우팅
 router.post("/signin", authController.signin);
+router.post("/signout", authController.signout);
 
 // 구글 로그인
 router.post("/google", authController.googleSignin);

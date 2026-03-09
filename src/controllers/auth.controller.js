@@ -139,6 +139,19 @@ authController.googleSignin = async (req, res, next) => {
   }
 };
 
+authController.signout = async (req, res, next) => {
+  try {
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "strict",
+    });
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 authController.refresh = async (req, res, next) => {
   try {
     const refreshToken = req.cookies.refreshToken;
