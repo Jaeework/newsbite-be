@@ -60,7 +60,7 @@ authController.signin = async (req, res, next) => {
 
     if (!isMatch) {
       return next(
-        new ApiError("이메일 또는  비밀번호를 확인하세요.", 400, true)
+        new ApiError("이메일 또는 비밀번호를 확인하세요.", 400, true)
       );
     }
 
@@ -95,7 +95,7 @@ authController.googleSignin = async (req, res, next) => {
   try {
     const idToken = req.body.idToken || req.body.credential;
     if (!idToken) {
-      return next(new ApiError("idToken is required", 400, true));
+      return next(new ApiError("idToken is required", 400, false));
     }
 
     const ticket = await googleClient.verifyIdToken({
@@ -111,7 +111,7 @@ authController.googleSignin = async (req, res, next) => {
       (email ? email.split("@")[0] : "user");
 
     if (!email) {
-      return next(new ApiError("Google token has no email", 400, true));
+      return next(new ApiError("Google 계정에 정보가 존재하지 않습니다.", 400, true));
     }
 
     // 탈퇴 유저는 막기
