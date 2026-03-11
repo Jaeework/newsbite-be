@@ -64,7 +64,7 @@ userWordsController.getMyWords = async (req, res, next) => {
 
     let query = UserWord.find(filter).populate({
       path: "word",
-      select: "text meaning type",
+      select: "text meaning type example example_meaning",
       populate: {
         path: "news",
         populate: {
