@@ -42,8 +42,13 @@ userSchema.set("toJSON", {
   }
 });
 
-userSchema.methods.generateToken = function () {
+userSchema.methods.generateAccessToken = function () {
   return jwt.sign({ userId: this._id }, process.env.JWT_SECRET, {
+    expiresIn: "1h",
+  });
+};
+userSchema.methods.generateRefreshToken = function () {
+  return jwt.sign({ userId: this._id }, process.env.JWT_REFRESH_SECRET, {
     expiresIn: "7d",
   });
 };
