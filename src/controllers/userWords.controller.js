@@ -46,7 +46,15 @@ userWordsController.createMyWords = async (req, res, next) => {
 userWordsController.getMyWords = async (req, res, next) => {
   try {
     const { userId } = req;
-    const { q, status = "all", sort = "recent" } = req.query;
+
+    const {
+      q,
+      status = "all",
+      sort = "recent",
+      type,
+      page = 1,
+      limit = 12,
+    } = req.query;
 
     if (!userId) {
       throw new ApiError("Unauthorized", 401, false);
@@ -56,14 +64,22 @@ userWordsController.getMyWords = async (req, res, next) => {
       throw new ApiError("Invalid request", 400, false);
     }
 
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+    const skip = (pageNum - 1) * limitNum;
+
     const filter = { user: userId };
 
-    //상태 필터
+    // 상태 필터
     if (status === "done") filter.isDone = true;
     if (status === "doing") filter.isDone = false;
 
     let query = UserWord.find(filter).populate({
       path: "word",
+      match: {
+        ...(type && type !== "all" ? { type } : {}),
+        ...(q ? { text: { $regex: q, $options: "i" } } : {}),
+      },
       select: "text meaning type example example_meaning",
       populate: {
         path: "news",
@@ -74,35 +90,44 @@ userWordsController.getMyWords = async (req, res, next) => {
       },
     });
 
-    //정렬
+    // 정렬
     if (sort === "recent") {
       query = query.sort({ createdAt: -1 });
+    } else if (sort === "oldest") {
+      query = query.sort({ createdAt: 1 });
     }
+
+    // 페이지네이션
+    query = query.skip(skip).limit(limitNum);
 
     let userWords = await query;
 
-    //검색어가 들어오면
-    if (q) {
-      userWords = userWords.filter((uw) =>
-        uw.word?.text.toLowerCase().includes(q.toLowerCase())
-      );
-    }
+    userWords = userWords.filter((uw) => uw.word);
 
-    //알파벳 정렬
     if (sort === "alpha") {
       userWords.sort((a, b) => a.word.text.localeCompare(b.word.text));
     }
 
     const result = userWords.map((uw) => ({
-      id: uw._id,
+      _id: uw._id,
       isDone: uw.isDone,
       createdAt: uw.createdAt,
       word: uw.word,
     }));
 
+    const totalItems = await UserWord.countDocuments(filter);
+
+    const totalPages = Math.ceil(totalItems / limitNum);
+
     res.status(200).json({
       success: true,
       data: result,
+      pagination: {
+        totalItems,
+        totalPages,
+        currentPage: pageNum,
+        limit: limitNum,
+      },
     });
   } catch (err) {
     next(err);
