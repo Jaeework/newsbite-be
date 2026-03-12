@@ -74,7 +74,7 @@ newsController.getAllNews = async (req, res, next) => {
       pagination: {
         currentPage: page,
         limit,
-        totalPages: total,
+        totalItems: total,
         totalPages: Math.ceil(total / limit),
       },
     });
