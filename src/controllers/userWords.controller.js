@@ -42,7 +42,7 @@ userWordsController.createMyWords = async (req, res, next) => {
   }
 };
 
-//단어 조회, 검색, 정렬
+// 단어 조회, 검색, 정렬
 userWordsController.getMyWords = async (req, res, next) => {
   try {
     const { userId } = req;
@@ -74,50 +74,52 @@ userWordsController.getMyWords = async (req, res, next) => {
     if (status === "done") filter.isDone = true;
     if (status === "doing") filter.isDone = false;
 
-    let query = UserWord.find(filter).populate({
-      path: "word",
-      match: {
-        ...(type && type !== "all" ? { type } : {}),
-        ...(q ? { text: { $regex: q, $options: "i" } } : {}),
-      },
-      select: "text meaning type example example_meaning",
-      populate: {
-        path: "news",
+    // 기본 조회
+    let userWords = await UserWord.find(filter)
+      .sort(
+        sort === "recent"
+          ? { createdAt: -1 }
+          : sort === "oldest"
+          ? { createdAt: 1 }
+          : { createdAt: -1 }
+      )
+      .populate({
+        path: "word",
+        match: {
+          ...(type && type !== "all" ? { type } : {}),
+          ...(q ? { text: { $regex: q, $options: "i" } } : {}),
+        },
+        select: "text meaning type example example_meaning",
         populate: {
           path: "news",
-          select: "title",
+          populate: {
+            path: "news",
+            select: "title",
+          },
         },
-      },
-    });
+      });
 
-    // 정렬
-    if (sort === "recent") {
-      query = query.sort({ createdAt: -1 });
-    } else if (sort === "oldest") {
-      query = query.sort({ createdAt: 1 });
-    }
-
-    // 페이지네이션
-    query = query.skip(skip).limit(limitNum);
-
-    let userWords = await query;
-
+    // populate match 때문에 word 없는 데이터 제거
     userWords = userWords.filter((uw) => uw.word);
 
+    // 알파벳 정렬
     if (sort === "alpha") {
       userWords.sort((a, b) => a.word.text.localeCompare(b.word.text));
     }
 
-    const result = userWords.map((uw) => ({
+    // 전체 개수
+    const totalItems = userWords.length;
+    const totalPages = Math.ceil(totalItems / limitNum);
+
+    // pagination
+    const paginatedWords = userWords.slice(skip, skip + limitNum);
+
+    const result = paginatedWords.map((uw) => ({
       _id: uw._id,
       isDone: uw.isDone,
       createdAt: uw.createdAt,
       word: uw.word,
     }));
-
-    const totalItems = await UserWord.countDocuments(filter);
-
-    const totalPages = Math.ceil(totalItems / limitNum);
 
     res.status(200).json({
       success: true,
