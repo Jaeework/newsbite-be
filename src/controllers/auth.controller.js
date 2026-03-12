@@ -198,4 +198,22 @@ authController.refresh = async (req, res, next) => {
   }
 };
 
+authController.checkDuplicateEmail = async (req, res, next) => {
+  try {
+    const {email} = req.query;
+    if (!email) {
+      return next(new ApiError("이메일을 입력해주세요", 400, true));
+    }
+
+    const user = await User.findOne({email});
+
+    return res.status(200).json({
+      success: true,
+      data: !!user
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = authController;
