@@ -31,9 +31,24 @@ const userSchema = Schema(
   },
   { timestamps: true },
 );
+userSchema.set("toJSON", {
+  transform: (doc, ret) => {
+    delete ret.password;
+    delete ret.__v;
+    delete ret.createdAt;
+    delete ret.updatedAt;
+    delete ret.del_flag;
+    return ret;
+  }
+});
 
-userSchema.methods.generateToken = function () {
+userSchema.methods.generateAccessToken = function () {
   return jwt.sign({ userId: this._id }, process.env.JWT_SECRET, {
+    expiresIn: "1h",
+  });
+};
+userSchema.methods.generateRefreshToken = function () {
+  return jwt.sign({ userId: this._id }, process.env.JWT_REFRESH_SECRET, {
     expiresIn: "7d",
   });
 };

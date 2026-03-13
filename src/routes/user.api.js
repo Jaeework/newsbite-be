@@ -5,14 +5,19 @@ const userController = require("../controllers/user.controller");
 const userWordsController = require("../controllers/userWords.controller");
 const userNewsController = require("../controllers/userNews.controller");
 
-router.get("/me", authMiddleware, userController.getMe); 
-router.put("/me", authMiddleware, userController.updateMe);
-router.delete("/me", authMiddleware, userController.deleteMe);
+// user
+router.get("/me", authMiddleware, userController.getUserById);
+router.put("/me", authMiddleware, userController.updateUser);
+router.delete("/me", authMiddleware, userController.deleteUser);
+
+// userNews
 router.post("/news/:id", authMiddleware, userNewsController.createUserNews);
 router.delete("/news/:id", authMiddleware, userNewsController.deleteUserNews);
 router.get("/news", authMiddleware, userNewsController.getUserNewsList);
 router.put("/news/:id/hide", authMiddleware, userNewsController.hideUserNews);
-router.post("/words/:wordId", authMiddleware, userWordsController.createMyWord);
+
+// userWords
+router.post("/words", authMiddleware, userWordsController.createMyWords);
 router.get(
   "/words/export",
   authMiddleware,
