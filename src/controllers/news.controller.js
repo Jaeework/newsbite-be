@@ -3,79 +3,97 @@ const Word = require("../models/Word");
 const NewsWords = require("../models/NewsWord");
 const UserWord = require("../models/UserWord");
 const ApiError = require("../utils/ApiError");
+const User = require("../models/User");
 const newsController = {};
+const LEVEL_ORDER = { A2: 1, B1: 2, B2: 3, C1: 4 };
 
 // 뉴스 전체 조회
 newsController.getAllNews = async (req, res, next) => {
   try {
-    const { keyword } = req.query;
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 12;
-    const skip = (page - 1) * limit;
+    const { keyword, page = 1, limit = 12, level } = req.query;
+    const { userId } = req;
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+    const skip = (pageNum - 1) * limitNum;
 
-
-    //검색어 없으면 전체 조회 + 페이지네이션
-    if (!keyword) {
-      const total = await News.countDocuments({});
-      const news = await News.find({})
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit);
-
-      return res.status(200).json({
-        success: true,
-        data: news,
-        pagination: {
-          currentPage: page,
-          limit,
-          totalItems: total,
-          totalPages: Math.ceil(total / limit),
-        },
-      });
+    let userLevel = null;
+    if (userId) {
+      const user = await User.findById(userId);
+      if (user) userLevel = user.level;
     }
 
-    //뉴스 제목 검색
-    const newsByTitle = await News.find({
-      title: { $regex: keyword, $options: "i" },
-    });
+    const matchStage = {};
+    if (level) matchStage.level = level;
 
-    //단어로 검색
-    const words = await Word.find({
-      text: { $regex: keyword, $options: "i" },
-    }).populate({
-      path: "news",
-      populate: {
+    if (keyword) {
+      const words = await Word.find({
+        text: { $regex: keyword, $options: "i" },
+      }).populate({
         path: "news",
-        select: "title content",
+        select: "news",
+      });
+
+      const newsIdsByWord = words.flatMap((w) =>
+        (w.news || []).map((nw) => nw.news).filter(Boolean),
+      );
+
+      matchStage.$or = [
+        { title: { $regex: keyword, $options: "i" } },
+        { _id: { $in: newsIdsByWord } },
+      ];
+    }
+
+    const pipeline = [
+      { $match: matchStage },
+      {
+        $addFields: {
+          levelOrder: {
+            $switch: {
+              branches: [
+                // 특정 레벨 필터 없을 때만 유저 레벨을 0순위로
+                ...(userLevel && !level ? [{ case: { $eq: ["$level", userLevel] }, then: 0 }] : []),
+                ...Object.entries(LEVEL_ORDER).map(([k, v]) => ({
+                  case: { $eq: ["$level", k] },
+                  then: v,
+                })),
+              ],
+              default: 99,
+            },
+          },
+          createdDate: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+          },
+        },
       },
-    });
+      {
+        $sort: {
+          createdDate: -1,
+          levelOrder: 1,
+        },
+      },
+      {
+        $facet: {
+          data: [{ $skip: skip }, { $limit: limitNum }],
+          total: [{ $count: "count" }],
+        },
+      },
+    ];
 
-    const newsByWord = words.flatMap((w) => (w.news || []).map((nw) => nw.news));
+    const [result] = await News.aggregate(pipeline);
+    const totalItems = result.total[0]?.count ?? 0;
 
-    //중복 제거
-    const newsMap = new Map();
-
-    [...newsByTitle, ...newsByWord].forEach((news) => {
-      newsMap.set(news._id.toString(), news);
-    });
-
-    const result = Array.from(newsMap.values());
-
-    if (result.length === 0) {
+    if (keyword && totalItems === 0) {
       throw new ApiError("검색 결과가 없습니다.", 404, true);
     }
 
-    const total = result.length;
-    const paginatedResult = result.slice(skip, skip + limit);
-
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
-      data: paginatedResult,
+      data: result.data,
       pagination: {
-        currentPage: page,
-        limit,
-        totalItems: total,
-        totalPages: Math.ceil(total / limit),
+        totalItems,
+        totalPages: Math.ceil(totalItems / limitNum),
+        currentPage: pageNum,
+        limit: limitNum,
       },
     });
   } catch (err) {
