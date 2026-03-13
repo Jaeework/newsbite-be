@@ -4,6 +4,7 @@ const ApiError = require("../utils/ApiError");
 const { OAuth2Client } = require("google-auth-library");
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const jwt = require("jsonwebtoken");
+const validator = require("validator");
 
 const authController = {};
 
@@ -12,6 +13,10 @@ const authController = {};
 authController.signup = async (req, res, next) => {
   try {
     const { nickname, email, password, level } = req.body;
+
+    if (!nickname || !email || !password || !level) {
+      throw new ApiError("모든 필드를 입력해주세요.", 400, true);
+    }
 
     const existing = await User.findOne({ email });
     if (existing) {
@@ -197,5 +202,27 @@ authController.refresh = async (req, res, next) => {
     return next(err);
   }
 };
+
+authController.checkDuplicateEmail = async (req, res, next) => {
+  try {
+    const {email} = req.query;
+    if (!email) {
+      return next(new ApiError("이메일을 입력해주세요", 400, true));
+    }
+
+    if (!validator.isEmail(email)) {
+      throw new ApiError("올바른 이메일 형식이 아닙니다", 400, true);
+    }
+
+    const user = await User.findOne({email});
+
+    return res.status(200).json({
+      success: true,
+      data: !!user
+    });
+  } catch (err) {
+    next(err);
+  }
+}
 
 module.exports = authController;

@@ -12,7 +12,6 @@ newsController.getAllNews = async (req, res, next) => {
   try {
     const { keyword, page = 1, limit = 12, level } = req.query;
     const { userId } = req;
-
     const pageNum = Number(page);
     const limitNum = Number(limit);
     const skip = (pageNum - 1) * limitNum;
@@ -20,91 +19,76 @@ newsController.getAllNews = async (req, res, next) => {
     let userLevel = null;
     if (userId) {
       const user = await User.findById(userId);
-      if (user) {
-        userLevel = user.level;
-      }
+      if (user) userLevel = user.level;
     }
 
-    const filter = {};
-    if (level) filter.level = level;
+    const matchStage = {};
+    if (level) matchStage.level = level;
 
-    let resultNews = [];
-    let totalItems = 0;
-
-    //키워드 있을시
     if (keyword) {
-      const [newsByTitle, words] = await Promise.all([
-        News.find({ ...filter, title: { $regex: keyword, $options: "i" } }),
-        Word.find({ text: { $regex: keyword, $options: "i" } }).populate({
-          path: "news",
-          populate: {
-            path: "news",
-            match: filter,
-            select: "title content level createdAt",
-          },
-          options: { strictPopulate: false },
-        }),
-      ]);
+      const words = await Word.find({
+        text: { $regex: keyword, $options: "i" },
+      }).populate({
+        path: "news",
+        select: "news",
+      });
 
-      // 가상 필드(news)를 타고 들어가 실제 News 객체들만 추출
-      const newsByWord = words.flatMap(
-        (w) => (w.news || []).map((nw) => nw.news).filter((n) => n !== null), // match: filter에 걸러진 null 제거
+      const newsIdsByWord = words.flatMap((w) =>
+        (w.news || []).map((nw) => nw.news).filter(Boolean),
       );
 
-      // ID 기준으로 중복 제거 (Map 활용)
-      const newsMap = new Map();
-      [...newsByTitle, ...newsByWord].forEach((news) => {
-        if (news && news._id) {
-          newsMap.set(news._id.toString(), news);
-        }
-      });
-
-      //정렬
-      resultNews = Array.from(newsMap.values()).sort((a, b) => {
-        // [맞춤 정렬] 유저 레벨과 일치하는 기사를 최상단으로
-        if (userLevel) {
-          if (a.level === userLevel && b.level !== userLevel) return -1;
-          if (a.level !== userLevel && b.level === userLevel) return 1;
-        }
-        // 그 외에는 레벨 순서(A2->C1) 및 최신순 정렬
-        const levelDiff = (LEVEL_ORDER[a.level] || 0) - (LEVEL_ORDER[b.level] || 0);
-        if (levelDiff !== 0) return levelDiff;
-        return new Date(b.published_at) - new Date(a.published_at);
-      });
-
-      totalItems = resultNews.length;
-      resultNews = resultNews.slice(skip, skip + limitNum);
-    } else {
-      // 키워드 없을 시: 전체 데이터 조회 (메모리 정렬을 위해 페이징 없이 가져옴)
-      resultNews = await News.find(filter).lean();
+      matchStage.$or = [
+        { title: { $regex: keyword, $options: "i" } },
+        { _id: { $in: newsIdsByWord } },
+      ];
     }
 
-    // 3. 통합 정렬 로직 (메모리 정렬)
-    resultNews.sort((a, b) => {
-      // 1순위: 로그인 유저 레벨과 일치하는 기사를 최상단으로
-      if (userLevel && !level) {
-        // 특정 레벨을 필터링하지 않았을 때만 적용
-        if (a.level === userLevel && b.level !== userLevel) return -1;
-        if (a.level !== userLevel && b.level === userLevel) return 1;
-      }
+    const pipeline = [
+      { $match: matchStage },
+      {
+        $addFields: {
+          levelOrder: {
+            $switch: {
+              branches: [
+                // 특정 레벨 필터 없을 때만 유저 레벨을 0순위로
+                ...(userLevel && !level ? [{ case: { $eq: ["$level", userLevel] }, then: 0 }] : []),
+                ...Object.entries(LEVEL_ORDER).map(([k, v]) => ({
+                  case: { $eq: ["$level", k] },
+                  then: v,
+                })),
+              ],
+              default: 99,
+            },
+          },
+          createdDate: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+          },
+        },
+      },
+      {
+        $sort: {
+          createdDate: -1,
+          levelOrder: 1,
+        },
+      },
+      {
+        $facet: {
+          data: [{ $skip: skip }, { $limit: limitNum }],
+          total: [{ $count: "count" }],
+        },
+      },
+    ];
 
-      // 2순위: 레벨 순서 정렬 (A2 -> C1)
-      const levelDiff = (LEVEL_ORDER[a.level] || 0) - (LEVEL_ORDER[b.level] || 0);
-      if (levelDiff !== 0) return levelDiff;
+    const [result] = await News.aggregate(pipeline);
+    const totalItems = result.total[0]?.count ?? 0;
 
-      // 3순위: 발행일 최신순 (기사 뭉침 방지)
-      return new Date(b.published_at || b.createdAt) - new Date(a.published_at || a.createdAt);
-    });
-
-    totalItems = resultNews.length;
-
-    // 4. 페이징 처리 (slice)
-    const finalData = resultNews.slice(skip, skip + limitNum);
+    if (keyword && totalItems === 0) {
+      throw new ApiError("검색 결과가 없습니다.", 404, true);
+    }
 
     res.status(200).json({
       success: true,
-      user: userId || "none", // 테스트용 유저 확인 필드
-      data: finalData,
+      data: result.data,
       pagination: {
         totalItems,
         totalPages: Math.ceil(totalItems / limitNum),

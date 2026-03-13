@@ -3,6 +3,7 @@ const Word = require("../models/Word");
 const ApiError = require("../utils/ApiError");
 
 const { Parser } = require("json2csv");
+const mongoose = require("mongoose");
 
 const userWordsController = {};
 
@@ -42,7 +43,7 @@ userWordsController.createMyWords = async (req, res, next) => {
   }
 };
 
-//단어 조회, 검색, 정렬
+// 단어 조회, 검색, 정렬
 userWordsController.getMyWords = async (req, res, next) => {
   try {
     const { userId } = req;
@@ -56,75 +57,106 @@ userWordsController.getMyWords = async (req, res, next) => {
       limit = 12,
     } = req.query;
 
-    if (!userId) {
-      throw new ApiError("Unauthorized", 401, false);
-    }
-
-    if (!["all", "done", "doing"].includes(status)) {
-      throw new ApiError("Invalid request", 400, false);
-    }
-
     const pageNum = Number(page);
     const limitNum = Number(limit);
     const skip = (pageNum - 1) * limitNum;
 
-    const filter = { user: userId };
+    //유저 데이터 가져오기
+    const pipeline = [
+      { $match: { user: new mongoose.Types.ObjectId(userId) } },
+    ];
 
-    // 상태 필터
-    if (status === "done") filter.isDone = true;
-    if (status === "doing") filter.isDone = false;
+    //학습 상태 필터
+    if (status === "done") pipeline.push({ $match: { isDone: true } });
+    if (status === "doing") pipeline.push({ $match: { isDone: false } });
 
-    let query = UserWord.find(filter).populate({
-      path: "word",
-      match: {
-        ...(type && type !== "all" ? { type } : {}),
-        ...(q ? { text: { $regex: q, $options: "i" } } : {}),
-      },
-      select: "text meaning type example example_meaning",
-      populate: {
-        path: "news",
-        populate: {
-          path: "news",
-          select: "title",
+    pipeline.push(
+      {
+        $lookup: {
+          from: "words",
+          localField: "word",
+          foreignField: "_id",
+          as: "wordDetail",
         },
+      },
+      { $unwind: "$wordDetail" },
+      {
+        $lookup: {
+          from: "newswords",
+          localField: "wordDetail._id",
+          foreignField: "word",
+          as: "newsWordLinks",
+        },
+      },
+      {
+        $lookup: {
+          from: "news",
+          localField: "newsWordLinks.news",
+          foreignField: "_id",
+          as: "newsDetail",
+        },
+      }
+    );
+
+    const wordMatch = {};
+
+    if (type && type !== "all") wordMatch["wordDetail.type"] = type;
+    if (q) wordMatch["wordDetail.text"] = { $regex: q, $options: "i" };
+
+    if (Object.keys(wordMatch).length > 0) {
+      pipeline.push({ $match: wordMatch });
+    }
+
+    let sortStage = { createdAt: -1 };
+    if (sort === "oldest") sortStage = { createdAt: 1 };
+    if (sort === "alpha") sortStage = { "wordDetail.text": 1 };
+
+    pipeline.push({ $sort: sortStage });
+
+    pipeline.push({
+      $facet: {
+        data: [
+          { $skip: skip },
+          { $limit: limitNum },
+          {
+            $project: {
+              _id: 1,
+              isDone: 1,
+              createdAt: 1,
+              word: {
+                _id: "$wordDetail._id",
+                text: "$wordDetail.text",
+                meaning: "$wordDetail.meaning",
+                type: "$wordDetail.type",
+                example: "$wordDetail.example",
+                example_meaning: "$wordDetail.example_meaning",
+                news: {
+                  $map: {
+                    input: "$newsDetail",
+                    as: "n",
+                    in: {
+                      _id: "$$n._id",
+                      title: "$$n.title",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        ],
+        total: [{ $count: "count" }],
       },
     });
 
-    // 정렬
-    if (sort === "recent") {
-      query = query.sort({ createdAt: -1 });
-    } else if (sort === "oldest") {
-      query = query.sort({ createdAt: 1 });
-    }
-
-    // 페이지네이션
-    query = query.skip(skip).limit(limitNum);
-
-    let userWords = await query;
-
-    userWords = userWords.filter((uw) => uw.word);
-
-    if (sort === "alpha") {
-      userWords.sort((a, b) => a.word.text.localeCompare(b.word.text));
-    }
-
-    const result = userWords.map((uw) => ({
-      _id: uw._id,
-      isDone: uw.isDone,
-      createdAt: uw.createdAt,
-      word: uw.word,
-    }));
-
-    const totalItems = await UserWord.countDocuments(filter);
-
-    const totalPages = Math.ceil(totalItems / limitNum);
+    const [result] = await UserWord.aggregate(pipeline);
+    const totalItems = result.total[0]?.count ?? 0;
 
     res.status(200).json({
       success: true,
-      data: result,
+      data: result.data,
       pagination: {
         totalItems,
-        totalPages,
+        totalPages: Math.ceil(totalItems / limitNum),
         currentPage: pageNum,
         limit: limitNum,
       },
@@ -213,8 +245,8 @@ userWordsController.exportMyWordsCSV = async (req, res, next) => {
       단어: uw.word?.text || "",
       뜻: uw.word?.meaning || "",
       예문: uw.word?.example || "",
-      예문뜻: uw.word?.example_meaning || "",
-      타입: uw.word?.type || "",
+      "예문 해석": uw.word?.example_meaning || "",
+      유형: uw.word?.type || "",
     }));
 
     const fields = ["단어", "뜻", "예문", "예문 해석", "유형"];
