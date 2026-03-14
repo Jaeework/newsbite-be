@@ -28,6 +28,11 @@ const userSchema = Schema(
       type: Boolean,
       default: false,
     },
+    provider: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
+    },
     isVerified: {type: Boolean, default: false},
     verificationToken: {type: String},
     verificationTokenExpiresAt: {type: Date},
