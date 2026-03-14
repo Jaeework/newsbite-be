@@ -10,6 +10,7 @@ router.post("/signin", authController.signin);
 router.post("/signout", authController.signout);
 router.post("/refresh", authController.refresh);
 router.get("/check-email", authController.checkDuplicateEmail);
+router.get("/verify-email", authController.verifyEmail);
 
 // 구글 로그인
 router.post("/google", authController.googleSignin);

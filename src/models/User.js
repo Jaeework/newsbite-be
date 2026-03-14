@@ -32,7 +32,10 @@ const userSchema = Schema(
       type: String,
       enum: ["local", "google"],
       default: "local",
-    }
+    },
+    isVerified: {type: Boolean, default: false},
+    verificationToken: {type: String},
+    verificationTokenExpiresAt: {type: Date},
   },
   { timestamps: true },
 );
@@ -43,9 +46,17 @@ userSchema.set("toJSON", {
     delete ret.createdAt;
     delete ret.updatedAt;
     delete ret.del_flag;
+    delete ret.isVerified;
+    delete ret.verificationToken;
+    delete ret.verificationTokenExpiresAt;
     return ret;
   }
 });
+
+userSchema.index(
+  { verificationTokenExpiresAt: 1 },
+  { expireAfterSeconds: 0 }
+);
 
 userSchema.methods.generateAccessToken = function () {
   return jwt.sign({ userId: this._id }, process.env.JWT_SECRET, {
