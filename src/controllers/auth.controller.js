@@ -135,6 +135,7 @@ authController.googleSignin = async (req, res, next) => {
         email,
         password: tempPassword,
         level: "A2", // 기본값
+        provider: "google",
       });
     }
 
