@@ -48,6 +48,11 @@ userSchema.set("toJSON", {
   }
 });
 
+userSchema.index(
+  { verificationTokenExpiresAt: 1 },
+  { expireAfterSeconds: 0 }
+);
+
 userSchema.methods.generateAccessToken = function () {
   return jwt.sign({ userId: this._id }, process.env.JWT_SECRET, {
     expiresIn: "1h",
