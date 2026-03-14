@@ -65,6 +65,12 @@ userController.deleteUser = async (req, res, next) => {
     user.del_flag = true;
     await user.save();
 
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "strict",
+    });
+
     return res.status(200).json({
       success: true,
       data: null

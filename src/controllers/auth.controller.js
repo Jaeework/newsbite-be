@@ -5,6 +5,8 @@ const { OAuth2Client } = require("google-auth-library");
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const jwt = require("jsonwebtoken");
 const validator = require("validator");
+const crypto = require("crypto");
+const { sendVerificationEmail } = require("../services/emailService");
 
 const authController = {};
 
@@ -20,11 +22,15 @@ authController.signup = async (req, res, next) => {
 
     const existing = await User.findOne({ email });
     if (existing) {
-      throw new ApiError("이미 가입된 이메일입니다.", 400, true);
+      throw new ApiError("이미 사용중인 이메일입니다.", 400, true);
     }
 
     // 비밀번호 hash 로 변경, 암화화 강도(반복횟수) 10
     const hashed = await bcrypt.hash(password, 10);
+
+    // 이메일 검증용 토큰 정보
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     // DB에 새로운 유저를 저장  -> user._id 값이 생성됨
     const user = await User.create({
@@ -32,7 +38,11 @@ authController.signup = async (req, res, next) => {
       email,
       password: hashed,
       level,
+      verificationToken,
+      verificationTokenExpiresAt,
     });
+
+    await sendVerificationEmail(email, verificationToken);
 
     // 성공 응답 보내기, 201은 새 리소스 생성됨(회원 생성)
     return res.status(201).json({
@@ -67,6 +77,10 @@ authController.signin = async (req, res, next) => {
       return next(
         new ApiError("이메일 또는 비밀번호를 확인하세요.", 400, true)
       );
+    }
+
+    if (!user.isVerified) {
+      return next(new ApiError("이메일 인증이 필요합니다.", 403, true));
     }
 
     // 로그인 성공했으면 토큰 발급
@@ -135,6 +149,8 @@ authController.googleSignin = async (req, res, next) => {
         email,
         password: tempPassword,
         level: "A2", // 기본값
+        provider: "google",
+        isVerified: true,
       });
     }
 
@@ -219,6 +235,37 @@ authController.checkDuplicateEmail = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       data: !!user
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+authController.verifyEmail = async (req, res, next) => {
+  try {
+    const { token } = req.query;
+
+    if (!token) {
+      throw new ApiError("토큰이 존재하지 않습니다.", 400, false);
+    }
+
+    const user = await User.findOne({
+      verificationToken: token,
+      verificationTokenExpiresAt: {$gt: new Date()},
+    });
+
+    if (!user) {
+      throw new ApiError("유효하지 않거나 만료된 링크입니다.", 400, true);
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpiresAt = undefined;
+    await user.save();
+
+    res.json({
+      success: true,
+      data: user
     });
   } catch (err) {
     next(err);
