@@ -28,6 +28,9 @@ const userSchema = Schema(
       type: Boolean,
       default: false,
     },
+    isVerified: {type: Boolean, default: false},
+    verificationToken: {type: String},
+    verificationTokenExpiresAt: {type: Date},
   },
   { timestamps: true },
 );
@@ -38,6 +41,9 @@ userSchema.set("toJSON", {
     delete ret.createdAt;
     delete ret.updatedAt;
     delete ret.del_flag;
+    delete ret.isVerified;
+    delete ret.verificationToken;
+    delete ret.verificationTokenExpiresAt;
     return ret;
   }
 });
