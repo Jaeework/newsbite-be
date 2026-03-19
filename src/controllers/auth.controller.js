@@ -6,7 +6,7 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const jwt = require("jsonwebtoken");
 const validator = require("validator");
 const crypto = require("crypto");
-const { sendVerificationEmail } = require("../services/emailService");
+const { sendVerificationEmail } = require("../services/email.service");
 
 const authController = {};
 
