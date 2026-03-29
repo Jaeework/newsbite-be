@@ -79,6 +79,76 @@ MongoDB
 
 <br />
 
+## 📊 ERD
+ 
+```mermaid
+erDiagram
+    User {
+        ObjectId _id PK
+        string nickname
+        string email
+        string password
+        string level
+        boolean del_flag
+        string provider
+        boolean isVerified
+        string verificationToken
+        date verificationTokenExpiresAt
+    }
+ 
+    News {
+        ObjectId _id PK
+        string title
+        string[] content
+        string url
+        string image
+        date published_at
+        string level
+        string source
+        string[] translated_content
+    }
+ 
+    Word {
+        ObjectId _id PK
+        string text
+        string meaning
+        string example
+        string example_meaning
+        string type
+    }
+ 
+    NewsWord {
+        ObjectId _id PK
+        ObjectId news FK
+        ObjectId word FK
+    }
+ 
+    UserNews {
+        ObjectId _id PK
+        ObjectId user FK
+        ObjectId news FK
+        boolean is_hidden
+        date hidden_at
+    }
+ 
+    UserWord {
+        ObjectId _id PK
+        ObjectId user FK
+        ObjectId word FK
+        boolean isDone
+    }
+
+    News ||--o{ NewsWord : "단어 포함"
+    Word ||--o{ NewsWord : "기사에 포함됨"
+    User ||--o{ UserNews : "기사 저장"
+    News ||--o{ UserNews : "유저에게 저장됨"
+    User ||--o{ UserWord : "단어 저장"
+    Word ||--o{ UserWord : "유저에게 저장됨"
+```
+> 양방향 조회 지원, 관계별 추가 데이터(isDone, is_hidden 등) 저장,
+> 도큐먼트 배열의 무한 증가 방지를 위해 다대다 관계를 중간 컬렉션으로 분리했습니다.
+<br />
+
 ## 🚀 시작하기
 
 ```bash
